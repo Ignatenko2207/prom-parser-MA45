@@ -33,14 +33,13 @@ public class PromProductParserService extends Thread {
                             ("data-qaid", "main_product_info").first();
 
             String itemId = extractItemId(productInfo);
-            String name             = null; //extractName(productInfo);
-            BigDecimal price        = null; //extractPrice(productInfo);
-            BigDecimal initPrice    = null; //extractInitPrice(productInfo, price);
-            String imageUrl         = null; //extractImageUrl(productInfo);
-            String availability     = null; //extractAvailability(productInfo);
+            String name             = extractName(productInfo);
+            BigDecimal price        = extractPrice(productInfo);
+            BigDecimal initPrice    = extractInitPrice(productInfo, price);
+            String imageUrl         = extractImageUrl(document);
+            String availability     = extractAvailability(productInfo);
 
             Item item = new Item(itemId, name, url, imageUrl, price, initPrice, availability);
-
             items.add(item);
         } catch (IOException e) {
             LOG.severe(String.format("Item by URL %s was not extracted", url));
@@ -48,15 +47,63 @@ public class PromProductParserService extends Thread {
 
     }
 
+    private String extractImageUrl(Element productInfo) {
+        String result = "";
+        try {
+            result = productInfo.getElementsByAttributeValue("property", "og:image").
+                    first().attr("content");
+        } catch (Exception e) {
+            LOG.severe(String.format("Item imageUrl by URL %s was not extracted", url));
+        }
+        return result;
+    }
+
+    private BigDecimal extractPrice(Element productInfo) {
+        BigDecimal result = null;
+        try {
+            String resultAsText = productInfo.
+                    getElementsByAttributeValue("data-qaid", "product_price").
+                    first().attr("data-qaprice");
+            result = new BigDecimal(resultAsText).setScale(2, RoundingMode.HALF_UP);
+        } catch (Exception e) {
+            LOG.severe(String.format("Item price by URL %s was not extracted", url));
+        }
+        return result;
+    }
+
+    private String extractAvailability(Element productInfo) {
+        String result = "";
+        try {
+            result = productInfo.getElementsByAttributeValue("data-qaid", "product_presence").
+                    first().text();
+        } catch (Exception e) {
+            LOG.severe(String.format("Item availability by URL %s was not extracted", url));
+        }
+        return result;
+    }
+
+    private String extractName(Element productInfo) {
+        String result = "";
+        try {
+            result = productInfo.getElementsByAttributeValue("data-qaid", "product_name").
+                    first().text();
+        } catch (Exception e) {
+            LOG.severe(String.format("Item name by URL %s was not extracted", url));
+        }
+        return result;
+    }
+
     private BigDecimal extractInitPrice(Element productInfo, BigDecimal price) {
         BigDecimal result = price;
         try {
             String resultAsText = productInfo.
                     getElementsByAttributeValue("data-qaid", "price_without_discount").
-                    first().text();
+                    first().attr("data-qaprice");
             result = new BigDecimal(resultAsText).setScale(2, RoundingMode.HALF_UP);
         } catch (Exception e) {
-            LOG.severe(String.format("Item init price by URL %s was not extracted", url));
+            if (price == null) {
+                LOG.severe(String.format("Item init price by URL %s was not extracted", url));
+            }
         }
         return result;
     }
