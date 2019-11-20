@@ -41,41 +41,41 @@ public class PromNavigationParserService extends Thread {
             productElements.forEach(it -> itemlinks.add(it.attr("href")));
 
             int counter = 0;
-            for (String link: itemlinks) {
-                if (counter>3){
+            for (String link : itemlinks) {
+                if (counter > 1) {
                     break;
                 }
-               if (link != null) {
-                   PromProductParserService promProductParserService =
-                           new PromProductParserService(items, link);
-                   threads.add(promProductParserService);
-                   promProductParserService.start();
-                   counter++;
-               }
+                if (link != null) {
+                    PromProductParserService promProductParserService =
+                            new PromProductParserService(items, link);
+                    threads.add(promProductParserService);
+                    promProductParserService.start();
+                    counter++;
+                }
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             LOG.severe("Products were not extracted by URL " + url);
         }
 
         // pagination
         try {
-            if ( !url.contains("pages=") ) {
-                Element lastPageElement =
-                        document.getElementsByAttributeValue("data-qaid", "pagination_button").last();
-                if (lastPageElement != null) {
-                    Integer lastPage = Integer.valueOf(lastPageElement.text());
-                    for (int i = 2; i <= lastPage; i++) {
-                        String nextPageUrl = url + "&page=" + i;
-                        PromNavigationParserService promNavigationParserService =
-                                new PromNavigationParserService(items, nextPageUrl, threads);
-                        threads.add(promNavigationParserService);
-                        promNavigationParserService.start();
-                    }
-                }
+            if (items.size() > 10) {
+                return;
             }
-        }
-        catch (Exception e) {
+            Elements lastPageElements =
+                    document.getElementsByAttributeValue("rel", "next");
+            if (!lastPageElements.isEmpty()) {
+                Element lastPageElement = lastPageElements.first();
+
+                String nextPageUrl = lastPageElement.attr("href");
+                PromNavigationParserService promNavigationParserService =
+                        new PromNavigationParserService(items, nextPageUrl, threads);
+                threads.add(promNavigationParserService);
+                promNavigationParserService.start();
+
+            }
+
+        } catch (Exception e) {
             LOG.severe("Pages were not extracted by URL " + url);
         }
 
